@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Delivery Planning Document (Local Storage Enabled)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+
+<div class="max-w-7xl mx-auto bg-white shadow-xl rounded-2xl p-6">
+    <h1 class="text-2xl font-bold mb-6">Upcoming Delivery Planning</h1>
+
+    <form id="deliveryForm" class="space-y-6">
+        
+        <!-- Basic Info -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block font-medium">Project / Module Name *</label>
+                <input type="text" id="projectName" required class="w-full border rounded-lg p-2" />
+            </div>
+            <div>
+                <label class="block font-medium">Sprint / Version *</label>
+                <input type="text" id="sprintVersion" required class="w-full border rounded-lg p-2" />
+            </div>
+            <div>
+                <label class="block font-medium">Total Estimated Effort (Auto Calculated)</label>
+                <input type="number" step="0.01" id="totalEffort" readonly class="w-full border rounded-lg p-2 bg-gray-100" />
+            </div>
+        </div>
+
+        <!-- Dev Effort Breakdown -->
+        <div>
+            <h2 class="text-lg font-semibold mb-2">Development Effort Breakdown (Days)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block">Backend Effort *</label>
+                    <input type="number" step="0.01" id="backendEffort" required oninput="calculateTotal()" class="w-full border rounded-lg p-2" />
+                </div>
+                <div>
+                    <label class="block">Frontend Effort *</label>
+                    <input type="number" step="0.01" id="frontendEffort" required oninput="calculateTotal()" class="w-full border rounded-lg p-2" />
+                </div>
+                <div>
+                    <label class="block">App Effort *</label>
+                    <input type="number" step="0.01" id="appEffort" required oninput="calculateTotal()" class="w-full border rounded-lg p-2" />
+                </div>
+                <div>
+                    <label class="block">QA Effort *</label>
+                    <input type="number" step="0.01" id="qaEffort" required oninput="calculateTotal()" class="w-full border rounded-lg p-2" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Delivery Dates -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block font-medium">Dev Delivery Date *</label>
+                <input type="date" id="devDate" required class="w-full border rounded-lg p-2" />
+            </div>
+            <div>
+                <label class="block font-medium">QA Delivery Date *</label>
+                <input type="date" id="qaDate" required class="w-full border rounded-lg p-2" />
+            </div>
+            <div>
+                <label class="block font-medium">Client Delivery Date *</label>
+                <input type="date" id="clientDate" required class="w-full border rounded-lg p-2" />
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <div>
+            <label class="block font-medium">Notes / Dependencies *</label>
+            <textarea id="notes" required rows="3" class="w-full border rounded-lg p-2"></textarea>
+        </div>
+
+        <div class="flex gap-4">
+            <button type="submit" id="submitBtn" class="bg-blue-600 text-white px-6 py-2 rounded-xl">Add Plan</button>
+            <button type="reset" class="bg-gray-400 text-white px-6 py-2 rounded-xl" onclick="resetEdit()">Clear</button>
+            <button type="button" onclick="clearAllData()" class="bg-red-600 text-white px-6 py-2 rounded-xl">Clear All Saved Data</button>
+        </div>
+    </form>
+
+    <hr class="my-6" />
+
+    <h2 class="text-xl font-semibold mb-4">Planned Deliveries</h2>
+
+    <div class="overflow-x-auto">
+        <table class="min-w-full border" id="planTable">
+            <thead class="bg-gray-200 text-sm">
+                <tr>
+                    <th class="border p-2">Project</th>
+                    <th class="border p-2">Sprint</th>
+                    <th class="border p-2">Backend</th>
+                    <th class="border p-2">Frontend</th>
+                    <th class="border p-2">App</th>
+                    <th class="border p-2">QA</th>
+                    <th class="border p-2">Total</th>
+                    <th class="border p-2">Dev Date</th>
+                    <th class="border p-2">QA Date</th>
+                    <th class="border p-2">Client Date</th>
+                    <th class="border p-2">Notes</th>
+                    <th class="border p-2">Action</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const form = document.getElementById('deliveryForm');
+    const tableBody = document.querySelector('#planTable tbody');
+    const submitBtn = document.getElementById('submitBtn');
+
+    let plans = JSON.parse(localStorage.getItem('deliveryPlans')) || [];
+    let editIndex = null;
+
+    function calculateTotal() {
+        const backend = parseFloat(document.getElementById('backendEffort').value) || 0;
+        const frontend = parseFloat(document.getElementById('frontendEffort').value) || 0;
+        const app = parseFloat(document.getElementById('appEffort').value) || 0;
+        const qa = parseFloat(document.getElementById('qaEffort').value) || 0;
+
+        const total = backend + frontend + app + qa;
+        document.getElementById('totalEffort').value = total.toFixed(2);
+    }
+
+    function saveToLocalStorage() {
+        localStorage.setItem('deliveryPlans', JSON.stringify(plans));
+    }
+
+    function renderTable() {
+        tableBody.innerHTML = '';
+        plans.forEach((plan, index) => {
+            const row = document.createElement('tr');
+            row.classList.add('text-center', 'text-sm');
+
+            row.innerHTML = `
+                <td class="border p-2">${plan.projectName}</td>
+                <td class="border p-2">${plan.sprintVersion}</td>
+                <td class="border p-2">${plan.backendEffort}</td>
+                <td class="border p-2">${plan.frontendEffort}</td>
+                <td class="border p-2">${plan.appEffort}</td>
+                <td class="border p-2">${plan.qaEffort}</td>
+                <td class="border p-2 font-semibold">${plan.totalEffort}</td>
+                <td class="border p-2">${plan.devDate}</td>
+                <td class="border p-2">${plan.qaDate}</td>
+                <td class="border p-2">${plan.clientDate}</td>
+                <td class="border p-2">${plan.notes}</td>
+                <td class="border p-2 space-x-2">
+                    <button onclick="editRow(${index})" class="bg-yellow-500 text-white px-2 py-1 rounded-lg">Edit</button>
+                    <button onclick="deleteRow(${index})" class="bg-red-500 text-white px-2 py-1 rounded-lg">Delete</button>
+                </td>
+            `;
+
+            tableBody.appendChild(row);
+        });
+    }
+
+    function editRow(index) {
+        const plan = plans[index];
+        projectName.value = plan.projectName;
+        sprintVersion.value = plan.sprintVersion;
+        backendEffort.value = plan.backendEffort;
+        frontendEffort.value = plan.frontendEffort;
+        appEffort.value = plan.appEffort;
+        qaEffort.value = plan.qaEffort;
+        totalEffort.value = plan.totalEffort;
+        devDate.value = plan.devDate;
+        qaDate.value = plan.qaDate;
+        clientDate.value = plan.clientDate;
+        notes.value = plan.notes;
+
+        editIndex = index;
+        submitBtn.textContent = "Update Plan";
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetEdit() {
+        editIndex = null;
+        submitBtn.textContent = "Add Plan";
+        document.getElementById('totalEffort').value = '';
+    }
+
+    function deleteRow(index) {
+        plans.splice(index, 1);
+        saveToLocalStorage();
+        renderTable();
+    }
+
+    function clearAllData() {
+        if (confirm('Are you sure you want to delete all saved plans?')) {
+            plans = [];
+            saveToLocalStorage();
+            renderTable();
+        }
+    }
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        calculateTotal();
+
+        const planData = {
+            projectName: projectName.value,
+            sprintVersion: sprintVersion.value,
+            backendEffort: parseFloat(backendEffort.value).toFixed(2),
+            frontendEffort: parseFloat(frontendEffort.value).toFixed(2),
+            appEffort: parseFloat(appEffort.value).toFixed(2),
+            qaEffort: parseFloat(qaEffort.value).toFixed(2),
+            totalEffort: parseFloat(totalEffort.value).toFixed(2),
+            devDate: devDate.value,
+            qaDate: qaDate.value,
+            clientDate: clientDate.value,
+            notes: notes.value
+        };
+
+        if (editIndex !== null) {
+            plans[editIndex] = planData;
+        } else {
+            plans.push(planData);
+        }
+
+        saveToLocalStorage();
+        renderTable();
+        form.reset();
+        resetEdit();
+    });
+
+    renderTable();
+</script>
+
+</body>
+</html>
